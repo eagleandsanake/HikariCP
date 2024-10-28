@@ -120,6 +120,9 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
    public T borrow(long timeout, final TimeUnit timeUnit) throws InterruptedException
    {
       // Try the thread-local list first
+      // 为了降低锁的竞争，在线程本地变量中存放对于使用过的 实例的引用
+      // 借用的时候优先从线程副本中取得， 如果取不到再在公共的对象池进行获取
+      //  这个线程list，是在归还对象到对象池的时候，放入线程的list的
       final var list = threadList.get();
       for (int i = list.size() - 1; i >= 0; i--) {
          final var entry = list.remove(i);
@@ -143,7 +146,7 @@ public class ConcurrentBag<T extends IConcurrentBagEntry> implements AutoCloseab
             }
          }
 
-         listener.addBagItem(waiting);
+         listener.addBagItem(waiting); // 监听器创建连接
 
          timeout = timeUnit.toNanos(timeout);
          do {
